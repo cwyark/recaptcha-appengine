@@ -6,7 +6,7 @@ except ImportError:
     from setuptools import setup, find_packages
 
 setup(name='recaptcha-appengine',
-      version='1.0.0',
+      version='1.0.1',
       url = "http://github.com/cwyark/recaptcha-appengine",
       author = "Cwyark",
       author_email = "cwyark@gmail.com",

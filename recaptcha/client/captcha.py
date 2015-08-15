@@ -83,7 +83,7 @@ def submit (recaptcha_challenge_field,
         )
     
     
-     if (return_code == "true" and httpresp.status_code == 200):
+    if (return_code == "true" and httpresp.status_code == 200):
         return_values = httpresp.content.splitlines();
         return_code = return_values [0]
         return RecaptchaResponse (is_valid=True)
