@@ -75,17 +75,17 @@ def submit (recaptcha_challenge_field,
 
     httpresp = urlfetch.fetch (
         url = "http://%s/recaptcha/api/verify" % VERIFY_SERVER,
-        data = params,
+        payload = params,
+        method = urlfetch.POST,
         headers = {
             "Content-type": "application/x-www-form-urlencoded",
             "User-agent": "reCAPTCHA GAE Python"
             }
         )
     
-    
+    return_values = httpresp.content.splitlines();
+    return_code = return_values [0]
     if (return_code == "true" and httpresp.status_code == 200):
-        return_values = httpresp.content.splitlines();
-        return_code = return_values [0]
         return RecaptchaResponse (is_valid=True)
     else:
         return RecaptchaResponse (is_valid=False, error_code = return_values [1])
