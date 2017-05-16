@@ -1,8 +1,9 @@
 import urllib2, urllib
+import json
 from google.appengine.api import urlfetch
 
-API_SSL_SERVER="https://www.google.com/recaptcha/api"
-API_SERVER="http://www.google.com/recaptcha/api"
+API_SSL_SERVER="https://www.google.com/recaptcha/api.js"
+API_SERVER="http://www.google.com/recaptcha/api.js"
 VERIFY_SERVER="www.google.com"
 
 class RecaptchaResponse(object):
@@ -28,36 +29,28 @@ def displayhtml (public_key,
     else:
         server = API_SERVER
 
-    return """<script type="text/javascript" src="%(ApiServer)s/challenge?k=%(PublicKey)s%(ErrorParam)s"></script>
+    return """<script src="%(ApiServer)s" async defer></script>
 
-<noscript>
-  <iframe src="%(ApiServer)s/noscript?k=%(PublicKey)s%(ErrorParam)s" height="300" width="500" frameborder="0"></iframe><br />
-  <textarea name="recaptcha_challenge_field" rows="3" cols="40"></textarea>
-  <input type='hidden' name='recaptcha_response_field' value='manual_challenge' />
-</noscript>
+<div class="g-recaptcha" data-sitekey="%(PublicKey)s"></div>
 """ % {
         'ApiServer' : server,
         'PublicKey' : public_key,
-        'ErrorParam' : error_param,
         }
 
 
-def submit (recaptcha_challenge_field,
-            recaptcha_response_field,
+def submit (recaptcha_response_field,
             private_key,
             remoteip):
     """
     Submits a reCAPTCHA request for verification. Returns RecaptchaResponse
     for the request
 
-    recaptcha_challenge_field -- The value of recaptcha_challenge_field from the form
     recaptcha_response_field -- The value of recaptcha_response_field from the form
     private_key -- your reCAPTCHA private key
     remoteip -- the user's ip address
     """
 
-    if not (recaptcha_response_field and recaptcha_challenge_field and
-            len (recaptcha_response_field) and len (recaptcha_challenge_field)):
+    if not (recaptcha_response_field and len(recaptcha_response_field)):
         return RecaptchaResponse (is_valid = False, error_code = 'incorrect-captcha-sol')
     
 
@@ -67,14 +60,13 @@ def submit (recaptcha_challenge_field,
         return s
 
     params = urllib.urlencode ({
-            'privatekey': encode_if_necessary(private_key),
-            'remoteip' :  encode_if_necessary(remoteip),
-            'challenge':  encode_if_necessary(recaptcha_challenge_field),
-            'response' :  encode_if_necessary(recaptcha_response_field),
+            'secret': encode_if_necessary(private_key),
+            'response' : encode_if_necessary(recaptcha_response_field),
+            'remoteip' : encode_if_necessary(remoteip),
             })
 
     httpresp = urlfetch.fetch (
-        url = "http://%s/recaptcha/api/verify" % VERIFY_SERVER,
+        url = "https://%s/recaptcha/api/siteverify" % VERIFY_SERVER,
         payload = params,
         method = urlfetch.POST,
         headers = {
@@ -83,9 +75,9 @@ def submit (recaptcha_challenge_field,
             }
         )
     
-    return_values = httpresp.content.splitlines();
-    return_code = return_values [0]
-    if (return_code == "true" and httpresp.status_code == 200):
+    return_values = json.loads(httpresp.content)
+    return_code = return_values['success']
+    if (return_code == True and httpresp.status_code == 200):
         return RecaptchaResponse (is_valid=True)
     else:
-        return RecaptchaResponse (is_valid=False, error_code = return_values [1])
+        return RecaptchaResponse (is_valid=False, error_code = return_values['error-codes'])
